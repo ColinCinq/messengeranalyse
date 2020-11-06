@@ -1,0 +1,32 @@
+html, body {
+	background: #000;
+	overflow: hidden;
+}
+
+body > .container {
+	min-height: 100vh;
+	display: flex;
+	flex-direction: column;
+}
+
+.index a {
+	color: black;
+	text-decoration: none;
+}
+.index a:hover {
+	text-decoration: none;
+}
+
+/* scroll bar chrome */
+::-webkit-scrollbar {
+	width: 10px;
+}
+::-webkit-scrollbar-track {
+	background: #2a2a2a; 
+}
+::-webkit-scrollbar-thumb {
+	background: #8a8a8a; 
+}
+::-webkit-scrollbar-thumb:hover {
+	background: #555; 
+}

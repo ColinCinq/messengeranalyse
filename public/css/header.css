@@ -1,0 +1,24 @@
+.header .col-6 {
+	color: inherit;
+	text-decoration: inherit;
+	background-color: transparent;
+}
+.header .col-6 button {
+	font-size: 1.5rem;
+	margin: 0;
+	font-weight: 500;
+	font-family: inherit;
+	background: 0 0;
+	overflow: hidden;
+	line-height: inherit;
+	color: inherit;
+	border-width: 0;
+	border-bottom: 2px solid rgba(94, 184, 255, 0);
+	transition: border-bottom 0.5s;
+}
+.header .col-6 button:hover, .header .col-6 button:active {
+	border-bottom: 2px solid rgba(94, 184, 255, 1);
+}
+.header .col-6 button:focus {
+	outline: none;
+}

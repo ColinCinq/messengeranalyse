@@ -4,6 +4,21 @@
 
 {% block body %}
     <div class="row index">
-
+        <div class="col-1">
+            <input id="msgFolder" type="file" webkitdirectory directory multiple class="bg-dark">
+        </div>
     </div>
+{% endblock %}
+
+{% block script %}
+    <script>
+        let folder = $('#msgFolder')[0]
+        $(folder).on('input', ()=> {
+            let files = folder.files
+            for (let i = 0; i < files.length; i += 1) {
+                let fr = new FileReader()
+                console.log(.readAsText(files[i]))
+            }
+        })
+    </script>
 {% endblock %}

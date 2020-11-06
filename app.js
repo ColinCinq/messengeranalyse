@@ -1,5 +1,5 @@
 var server = require('./lib/server'),
-    handler = require('./lib/handler')
+    handler = require('./lib/handler')()
 
 require('./lib/router')(server, handler)
 
