@@ -1,0 +1,6 @@
+{% macro input(label, name, value, type = "text") %}
+    <label class="col-2">
+        {{ label }}
+        <input type="{{ type }}" name="{{ name }}" value="{{ value|e }}" size="">
+    </label>
+{% endmacro %}

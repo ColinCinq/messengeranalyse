@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{% block title %}Home{% endblock %}</title>
+        <link rel="icon" href="/img/punk.ico">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+        <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/themes/smoothness/jquery-ui.css">
+        <link href="/css/style.css" rel="stylesheet"/>
+        <link href="/css/header.css" rel="stylesheet"/>
+        {% block style %}{% endblock %}
+    </head>
+    <body>
+
+        <div class="container-fluid">
+            {% include './partials/header.html.twig' %}
+        </div>
+        <div class="container">
+            {% block body %}{% endblock %}
+        </div>
+        <div class="container-fluid">
+            {% include './partials/footer.html.twig' %}
+        </div>
+
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui-touch-punch/0.2.3/jquery.ui.touch-punch.min.js"></script>
+        <script src="/js/script.js"></script>
+        {% block script %}{% endblock %}
+    </body>
+</html>

@@ -1,5 +1,5 @@
 {
-    "name": "messenger analyse",
+    "name": "messenger_analyse",
     "version": "0.1.0",
     "dependencies": {
         "chart.js": "^2.9.4",
