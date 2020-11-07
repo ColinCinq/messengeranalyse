@@ -2,23 +2,176 @@
 
 {% block title %}Home{% endblock %}
 
+{% block style %}
+    <style>
+            @import url(https://fonts.googleapis.com/css?family=Montserrat:400,700);
+        *,
+        *:before,
+        *:after {
+            -webkit-box-sizing: border-box;
+            -moz-box-sizing: border-box;
+            box-sizing: border-box;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus,
+        button:focus {
+            outline: none;
+        }
+
+        .wrapper {
+            width: 100%;
+            min-height: 250px;
+            height: auto;
+        }
+
+        .drop {
+            width: 96%;
+            height: 96%;
+            border: 3px dashed #ff550b;
+            background-color: #121212;
+            border-radius: 15px;
+            text-align: center;
+            -webkit-transition: all 0.5s ease-out;
+            -moz-transition: all 0.5s ease-out;
+            transition: all 0.5s ease-out;
+            margin: auto;
+        }
+        .drop .cont {
+            -webkit-transition: all 0.5s ease-out;
+            -moz-transition: all 0.5s ease-out;
+            transition: all 0.5s ease-out;
+            margin: auto;
+        }
+        .drop .cont > i {
+            font-size: 200%;
+            position: relative;
+        }
+        .drop .cont .tit {
+            font-size: 200%;
+            text-transform: uppercase;
+        }
+
+        .drop input {
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+            background: red;
+            opacity: 0;
+            margin: auto;
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+        }
+
+        .fileDiv i {
+            line-height: 1.5;
+        }
+        .fileDiv .size {
+            font-size: 80%;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+{% endblock %}
+
 {% block body %}
     <div class="row index">
-        <div class="col-1">
-            <input id="msgFolder" type="file" webkitdirectory directory multiple class="bg-dark">
+        <div class="col-12">
+            <div class="wrapper">
+                <div class="drop row">
+                    <div class="cont col-12 col-md-7 col-lg-5">
+                        <i class="fa fa-cloud-upload-alt mt-2"></i>
+                        <div class="tit">
+                            Drag & Drop
+                        </div>
+                        <div class="desc">
+                            le dossier, ou
+                        </div>
+                        <div class="browse btn btn-primary py-1 px-5 my-3">
+                            cliquez pour importer
+                        </div>
+
+                    </div>
+                    <output id="listFile" class="col-12 col-md-5 col-lg-7 hidden">
+                        <div class="row"></div>
+                    </output>
+                    <input type="file" id="msgFolder" webkitdirectory directory name="files"/>
+                </div>
+            </div>
+        </div>
+        <div class="col-12">
+            <div class="row">
+                <p class="col-12 display-4">En cours :</p>
+                <p class="col-12 display-4 font-weight-bold text-center" id="currentMsgName">-</p>
+            </div>
         </div>
     </div>
 {% endblock %}
 
 {% block script %}
     <script>
+        function createFileDiv(fileName, fileSize){
+
+            if($('#listFile').hasClass('hidden'))
+                $('#listFile').removeClass('hidden')
+
+            let sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB']
+            if (fileSize === 0) fileSize = '0 Byte'
+            let j = parseInt(Math.floor(Math.log(fileSize) / Math.log(1024)))
+            fileSize = Math.round(fileSize / Math.pow(1024, j), 2) + ' ' + sizes[j]
+
+            $('#listFile>.row').append(
+                $('<div></div>').addClass('col-12 col-lg-6 fileDiv').append(
+                    $('<div></div>').addClass('row border border-secondary rounded my-1').append(
+                        $('<div></div>').addClass('col-6 text-left font-weight-bold').text(fileName),
+                        $('<div></div>').addClass('col-4 text-left size align-middle').text(fileSize),
+                        $('<div></div>').addClass('col-2').append(
+                            $('<i></i>').addClass('fas fa-cog fa-spin ' + fileName)
+                        )
+                    )
+                )
+            )
+        }
+        function deleteAllFileDiv(){
+            $('.fileDiv').remove()
+            $("#listFile").addClass('hidden')
+        }
+
         let folder = $('#msgFolder')[0]
-        $(folder).on('input', ()=> {
-            let files = folder.files
-            for (let i = 0; i < files.length; i += 1) {
-                let fr = new FileReader()
-                console.log(.readAsText(files[i]))
+        $(folder).on('change', () => {
+            let files = [],
+                datas = []
+            for (file of folder.files) {
+                if (RegExp('message_[1-9]+.json').test(file.name))
+                    files.push(file)
             }
+
+            deleteAllFileDiv()
+            for (file of files) {
+                let fileName = file.name.split('.')[0]
+                createFileDiv(fileName, file.size)
+
+                let reader = new FileReader()
+                reader.onload = (function (theFile) {
+                    return function (e) {
+                        try {
+                            json = JSON.parse(decodeURIComponent(escape(JSON.stringify(JSON.parse(e.target.result)))))
+                        } catch (ex) {
+                            alert('ex when trying to parse json = ' + ex)
+                        }
+                        datas.push(json)
+                        $('.'+fileName).removeClass('fa-cog').removeClass('fa-spin').addClass('fa-check').addClass('text-primary')
+                        $('#currentMsgName').text(json.title)
+                    }
+                })(file)
+                reader.readAsText(file)
+            }
+            console.log(datas)
         })
     </script>
 {% endblock %}

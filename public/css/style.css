@@ -1,10 +1,8 @@
-html, body {
-	background: #000;
-	overflow: hidden;
-}
+@import url('./header.css');
+@import url('./footer.css');
+@import url('./all.css');
 
 body > .container {
-	min-height: 100vh;
 	display: flex;
 	flex-direction: column;
 }
