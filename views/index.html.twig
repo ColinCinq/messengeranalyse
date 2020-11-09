@@ -110,18 +110,90 @@
                 <p class="col-12 display-4 font-weight-bold text-center" id="currentMsgName">-</p>
             </div>
         </div>
+        <div class="col-12 col-md-6 col-lg-4">
+            total messages : <span class="text-primary" id="totMsg"></span>
+        </div>
+        <div class="col-12 col-md-6 col-lg-4">
+            La convertaion dure depuis : <span class="text-primary" id="convSpan"></span>
+        </div>
+        <div class="col-12 col-md-6 col-lg-4">
+            my msg : <span class="text-primary" id="myMsg"></span>
+        </div>
     </div>
 {% endblock %}
 
 {% block script %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0"></script>
     <script>
+        let messagesList = [],
+            participantList = [],
+            startYear,
+            startMonth,
+            startDay,
+            endYear,
+            endMonth,
+            endDay,
+            basedOnToday = 1
+        // Import data from Json
+
+        //util function
+        $(() => {
+
+        })
+        format = function date2str(x, y) {
+            var z = {
+                M: x.getMonth() + 1,
+                d: x.getDate(),
+                h: x.getHours(),
+                m: x.getMinutes(),
+                s: x.getSeconds()
+            };
+            y = y.replace(/(M+|d+|h+|m+|s+)/g, function(v) {
+                return ((v.length > 1 ? "0" : "") + eval('z.' + v.slice(-1))).slice(-2)
+            });
+
+            return y.replace(/(y+)/g, function(v) {
+                return x.getFullYear().toString().slice(-v.length)
+            });
+        }
+        function sort_object(obj) {
+            items = Object.keys(obj).map(function(key) {
+                return [key, obj[key]];
+            });
+            items.sort(function(first, second) {
+                return second[1] - first[1];
+            });
+            sorted_obj={}
+            $.each(items, function(k, v) {
+                use_key = v[0]
+                use_value = v[1]
+                sorted_obj[use_key] = use_value
+            })
+            return(sorted_obj)
+        }
+        function generateGlobal() {
+            startYear = new Date(messagesList[0].timestamp_ms).getFullYear()
+            startMonth = new Date(messagesList[0].timestamp_ms).getMonth()
+            startDay = new Date(messagesList[0].timestamp_ms).getDay()
+            if (basedOnToday === 1) {
+                endYear = new Date().getFullYear()
+                endMonth = new Date().getMonth()
+                endDay = new  Date().getDate()
+            } else {
+                startYear = new Date(messagesList[messagesList.length-1].timestamp_ms).getFullYear()
+                startMonth = new Date(messagesList[messagesList.length-1].timestamp_ms).getMonth()
+                startDay = new Date(messagesList[messagesList.length-1].timestamp_ms).getDay()
+            }
+        }
+
+        // Create the display for imported json file
         function createFileDiv(fileName, fileSize){
 
-            if($('#listFile').hasClass('hidden'))
-                $('#listFile').removeClass('hidden')
+            $('#listFile').removeClass('hidden')
 
             let sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB']
-            if (fileSize === 0) fileSize = '0 Byte'
+            if (fileSize === 0)
+                fileSize = '0 Byte'
             let j = parseInt(Math.floor(Math.log(fileSize) / Math.log(1024)))
             fileSize = Math.round(fileSize / Math.pow(1024, j), 2) + ' ' + sizes[j]
 
@@ -142,36 +214,166 @@
             $("#listFile").addClass('hidden')
         }
 
+        // loading process from imported folder
         let folder = $('#msgFolder')[0]
         $(folder).on('change', () => {
-            let files = [],
-                datas = []
+            let files = []
+            messagesList = []
             for (file of folder.files) {
-                if (RegExp('message_[1-9]+.json').test(file.name))
+                if (RegExp('message_[0-9]+.json').test(file.name))
                     files.push(file)
             }
 
+            //2 level of Promise :
+            //   the inner one is for json reading process to complet
+            //   the surronding one is here to wait until the inner one start initializing Promise (else the Promise.all will evalute an empty array)
             deleteAllFileDiv()
+            let promiseDecod = [],
+                promisePromise = []
             for (file of files) {
-                let fileName = file.name.split('.')[0]
-                createFileDiv(fileName, file.size)
+                promisePromise.push(new Promise( (resolvePromise) => {
+                    let fileName = file.name.split('.')[0]
+                    createFileDiv(fileName, file.size)
 
-                let reader = new FileReader()
-                reader.onload = (function (theFile) {
-                    return function (e) {
-                        try {
-                            json = JSON.parse(decodeURIComponent(escape(JSON.stringify(JSON.parse(e.target.result)))))
-                        } catch (ex) {
-                            alert('ex when trying to parse json = ' + ex)
+                    // data generator
+                    let reader = new FileReader()
+                    reader.onload = ((theFile) => {
+                        return function (e) {
+                            promiseDecod.push(new Promise((resolveDecod) => {
+                                try {
+                                    json = JSON.parse(decodeURIComponent(escape(JSON.stringify(JSON.parse(e.target.result)))))
+                                } catch (ex) {
+                                    alert('ex when trying to parse json = ' + ex)
+                                }
+                                messagesList = messagesList.concat(json.messages)
+                                $('.' + fileName).removeClass('fa-cog').removeClass('fa-spin').addClass('fa-check').addClass('text-primary')
+                                $('#currentMsgName').text(json.title)
+                                resolveDecod()
+                            }))
+                            resolvePromise()
                         }
-                        datas.push(json)
-                        $('.'+fileName).removeClass('fa-cog').removeClass('fa-spin').addClass('fa-check').addClass('text-primary')
-                        $('#currentMsgName').text(json.title)
-                    }
-                })(file)
-                reader.readAsText(file)
+                    })(file)
+                    reader.readAsText(file)
+                }))
             }
-            console.log(datas)
+
+            Promise.all(promisePromise).then(() => {
+                Promise.all(promiseDecod).then(() => {
+                    messagesList.sort((a, b) => (a.timestamp_ms > b.timestamp_ms) ? 1 : -1)
+                    getParticipant()
+                    $('#totMsg').text(getTotalMsg())
+                    $('#convSpan').text(getSpanOfConversation())
+                    console.log(getMessagesPerMonth())
+                    console.log(getMessagesPerMonthPerParticipant())
+                    $('#myMsg').text(getTotalMessagesPerParticipant()['Colin Cqno'])
+                })
+            })
         })
+        // end of import process
+
+        // data process function
+        function getParticipant() {
+            for (m of messagesList) {
+                if(!participantList.includes(m.sender_name))
+                    participantList.push(m.sender_name)
+            }
+            return participantList
+        }
+
+        function getTotalMsg(){
+            return messagesList.length
+        }
+
+        function getSpanOfConversation(){
+            tmpDate = messagesList[messagesList.length-1].timestamp_ms - messagesList[0].timestamp_ms
+            return Math.ceil(tmpDate / (1000 * 60 * 60 * 24)) + " jours"
+        }
+
+        function getTotalMessagesPerParticipant(){
+            let ret = {}
+            for(p of participantList){
+                ret[p] = 0
+            }
+            for (m of messagesList){
+                ret[m.sender_name] ++
+            }
+            return ret
+        }
+
+        function getMessagesPerMonth() {
+            let ret = {}
+
+            for (i = startYear;i<=endYear;i++){
+                switch (i) {
+                    case startYear:
+                        for (j=startMonth;j<12;j++){
+                            ret[i+' '+j] = 0
+                        }
+                        break
+                    case endYear:
+                        for (j=0;j<=endMonth;j++){
+                            ret[i+' '+j] = 0
+                        }
+                        break
+                    default:
+                        for (j=0;j<12;j++){
+                            ret[i+' '+j] = 0
+                        }
+                        break
+                }
+            }
+            for (m of messagesList) {
+                ret[new Date(m.timestamp_ms).getFullYear()+' '+new Date(m.timestamp_ms).getMonth()] ++
+            }
+            return ret
+        }
+
+        function getMonthWithMostMsg(msgPerMonth) {
+            return Object.keys(msgPerMonth).reduce((a, b) => msgPerMonth[a] > msgPerMonth[b] ? a : b)
+        }
+
+        function getMessagesPerMonthPerParticipant() {
+            let startYear = new Date(messagesList[0].timestamp_ms).getFullYear(),
+                startMonth = new Date(messagesList[0].timestamp_ms).getMonth(),
+                endYear = new Date().getFullYear(),
+                endMonth = new Date().getMonth(),
+                ret = {}
+
+            function createLine(i,j) {
+                ret[i+' '+j] = {}
+                for (p of participantList) {
+                    ret[i+' '+j][p] = 0
+                }
+            }
+
+            for (i = startYear;i<=endYear;i++){
+                switch (i) {
+                    case startYear:
+                        for (j=startMonth;j<12;j++){
+                            createLine(i,j)
+                        }
+                        break
+                    case endYear:
+                        for (j=0;j<=endMonth;j++){
+                            createLine(i,j)
+                        }
+                        break
+                    default:
+                        for (j=0;j<12;j++){
+                            createLine(i,j)
+                        }
+                        break
+                }
+            }
+            for (m of messagesList) {
+                ret[new Date(m.timestamp_ms).getFullYear()+' '+new Date(m.timestamp_ms).getMonth()][m.sender_name] ++
+            }
+            return ret
+        }
+        
+        function getMsgPerDay(word) {
+
+        }
+        
     </script>
 {% endblock %}
