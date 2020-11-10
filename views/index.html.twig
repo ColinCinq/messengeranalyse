@@ -290,6 +290,7 @@
         // data process function
         dataProcess = {
             getParticipant : function(){
+                participantList = []
                 for (m of messagesList) {
                     if(!participantList.includes(m.sender_name))
                         participantList.push(m.sender_name)
@@ -306,7 +307,7 @@
                 return Math.ceil(tmpDate / (1000 * 60 * 60 * 24)) + " jours"
             },
 
-            getTotalMessagesPerParticipant : function(){
+            getTotalMsgPerParticipant : function(){
                 let ret = {}
                 for(p of participantList){
                     ret[p] = 0
@@ -317,7 +318,7 @@
                 return ret
             },
 
-            getMessagesPerMonth : function(){
+            getMsgPerMonth : function(){
                 let ret = {}
                 for (let i = new Date(new Date(startDate).setDate(1)) ; i<=new Date(new Date(endDate).setDate(2)) ; i.addMonths(1)){
                     ret[i.format('yyyy MM')] = 0
@@ -333,7 +334,7 @@
                 return Object.keys(msgPerMonth).reduce((a, b) => msgPerMonth[a] > msgPerMonth[b] ? a : b)
             },
 
-            getMessagesPerMonthPerParticipant : function(){
+            getMsgPerMonthPerParticipant : function(){
                 let ret = {}
                 for (let i = new Date(new Date(startDate).setDate(1)) ; i<=new Date(new Date(endDate).setDate(2)) ; i.addMonths(1)){
                     ret[i.format('yyyy MM')] = {}
@@ -353,7 +354,10 @@
                     ret[i.format('yyyy MM dd')] = 0
                 }
                 for (m of messagesList) {
-                    ret[new Date(m.timestamp_ms).format('yyyy MM dd')] ++
+                    if (word)
+                        a =1
+                    else
+                        ret[new Date(m.timestamp_ms).format('yyyy MM dd')] ++
                 }
                 return ret
             },
@@ -371,8 +375,62 @@
                 }
                 return ret
             },
+
+            getAverageResponseTimePerDay : function () {
+                let ret = {}
+                for (let i = new Date(new Date(startDate).setHours(1)) ; i<=new Date(new Date(endDate).setHours(2)) ; i.addDays(1)){
+                    ret[i.format('yyyy MM dd')] = {
+                        time : 0,
+                        nb : 0
+                    }
+                }
+                for (k in messagesList) {
+                    if (k!=0){
+                        let prev = messagesList[k-1],
+                            m = messagesList[k]
+                        if (m.sender_name !== prev.sender_name){
+                            ret[new Date(m.timestamp_ms).format('yyyy MM dd')].time += m.timestamp_ms - prev.timestamp_ms
+                            ret[new Date(m.timestamp_ms).format('yyyy MM dd')].nb ++
+                        }
+                    }
+                }
+                for (date in ret) {
+                    let tmp = ret[date].time / ret[date].nb
+                    ret[date] = isNaN(tmp) ? null : Math.round(tmp)
+                }
+                return ret
+            },
+
+            getAverageResponseTimePerDayPerParticipant : function () {
+                let ret = {}
+                for (let i = new Date(new Date(startDate).setHours(1)) ; i<=new Date(new Date(endDate).setHours(2)) ; i.addDays(1)){
+                    ret[i.format('yyyy MM dd')] = {}
+                    for (p of participantList) {
+                        ret[i.format('yyyy MM dd')][p] = {
+                            time : 0,
+                            nb : 0
+                        }
+                    }
+                }
+                for (k in messagesList) {
+                    if (k!=0){
+                        let prev = messagesList[k-1],
+                            m = messagesList[k]
+                        if (m.sender_name !== prev.sender_name){
+                            ret[new Date(m.timestamp_ms).format('yyyy MM dd')][m.sender_name].time += m.timestamp_ms - prev.timestamp_ms
+                            ret[new Date(m.timestamp_ms).format('yyyy MM dd')][m.sender_name].nb ++
+                        }
+                    }
+                }
+                for (date in ret) {
+                    for(participant in ret[date]){
+                        let tmp = ret[date][participant].time / ret[date][participant].nb
+                        ret[date][participant] = isNaN(tmp) ? null : Math.round(tmp)
+                    }
+                }
+                return ret
+            }
         }
 
-        
     </script>
 {% endblock %}
