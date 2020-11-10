@@ -127,34 +127,49 @@
     <script>
         let messagesList = [],
             participantList = [],
-            startYear,
-            startMonth,
-            startDay,
-            endYear,
-            endMonth,
-            endDay,
+            startDate,
+            endDate,
             basedOnToday = 1
-        // Import data from Json
 
         //util function
-        $(() => {
-
-        })
-        format = function date2str(x, y) {
-            var z = {
-                M: x.getMonth() + 1,
-                d: x.getDate(),
-                h: x.getHours(),
-                m: x.getMinutes(),
-                s: x.getSeconds()
-            };
-            y = y.replace(/(M+|d+|h+|m+|s+)/g, function(v) {
-                return ((v.length > 1 ? "0" : "") + eval('z.' + v.slice(-1))).slice(-2)
-            });
-
-            return y.replace(/(y+)/g, function(v) {
-                return x.getFullYear().toString().slice(-v.length)
-            });
+        Date.prototype.format = function (formatter) {
+            date = this
+            let z = {
+                M: date.getMonth() + 1,
+                d: date.getDate(),
+                h: date.getHours(),
+                m: date.getMinutes(),
+                s: date.getSeconds()
+            }
+            formatter = formatter.replace(/(M+|d+|h+|m+|s+)/g, function(v) {
+                return ((v.length > 1 ? "0" : "") + z[v.slice(-1)]).slice(-2)
+            })
+            return formatter.replace(/(y+)/g, function(v) {
+                return date.getFullYear().toString().slice(-v.length)
+            })
+        }
+        Date.prototype.addDays = function(days) {
+            this.setDate(this.getDate() + days)
+            return this
+        }
+        Date.isLeapYear = function (year) {
+            return (((year % 4 === 0) && (year % 100 !== 0)) || (year % 400 === 0))
+        }
+        Date.getDaysInMonth = function (year, month) {
+            return [31, (Date.isLeapYear(year) ? 29 : 28), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month]
+        }
+        Date.prototype.isLeapYear = function () {
+            return Date.isLeapYear(this.getFullYear())
+        }
+        Date.prototype.getDaysInMonth = function () {
+            return Date.getDaysInMonth(this.getFullYear(), this.getMonth())
+        }
+        Date.prototype.addMonths = function (value) {
+            var n = this.getDate()
+            this.setDate(1)
+            this.setMonth(this.getMonth() + value)
+            this.setDate(Math.min(n, this.getDaysInMonth()))
+            return this
         }
         function sort_object(obj) {
             items = Object.keys(obj).map(function(key) {
@@ -172,17 +187,11 @@
             return(sorted_obj)
         }
         function generateGlobal() {
-            startYear = new Date(messagesList[0].timestamp_ms).getFullYear()
-            startMonth = new Date(messagesList[0].timestamp_ms).getMonth()
-            startDay = new Date(messagesList[0].timestamp_ms).getDay()
+            startDate = new Date(messagesList[0].timestamp_ms)
             if (basedOnToday === 1) {
-                endYear = new Date().getFullYear()
-                endMonth = new Date().getMonth()
-                endDay = new  Date().getDate()
+                endDate = new Date(messagesList[messagesList.length-1].timestamp_ms)
             } else {
-                startYear = new Date(messagesList[messagesList.length-1].timestamp_ms).getFullYear()
-                startMonth = new Date(messagesList[messagesList.length-1].timestamp_ms).getMonth()
-                startDay = new Date(messagesList[messagesList.length-1].timestamp_ms).getDay()
+                endDate = new Date()
             }
         }
 
@@ -213,6 +222,8 @@
             $('.fileDiv').remove()
             $("#listFile").addClass('hidden')
         }
+
+        // Import data from Json
 
         // loading process from imported folder
         let folder = $('#msgFolder')[0]
@@ -260,121 +271,108 @@
             Promise.all(promisePromise).then(() => {
                 Promise.all(promiseDecod).then(() => {
                     messagesList.sort((a, b) => (a.timestamp_ms > b.timestamp_ms) ? 1 : -1)
-                    getParticipant()
-                    $('#totMsg').text(getTotalMsg())
-                    $('#convSpan').text(getSpanOfConversation())
+                    dataProcess.getParticipant()
                     generateGlobal()
-                    console.log(getMessagesPerMonth())
-                    console.log(getMessagesPerMonthPerParticipant())
-                    $('#myMsg').text(getTotalMessagesPerParticipant()['Colin Cqno'])
+
+                    $('#totMsg').text(dataProcess.getTotalMsg())
+                    $('#convSpan').text(dataProcess.getSpanOfConversation())
+                    $('#myMsg').text(dataProcess.getTotalMessagesPerParticipant()['Colin Cqno'])
+
+                    for (data in dataProcess) {
+                        console.log(data + ' :')
+                        console.log(dataProcess[data]())
+                    }
                 })
             })
         })
         // end of import process
 
         // data process function
-        function getParticipant() {
-            for (m of messagesList) {
-                if(!participantList.includes(m.sender_name))
-                    participantList.push(m.sender_name)
-            }
-            return participantList
-        }
-
-        function getTotalMsg(){
-            return messagesList.length
-        }
-
-        function getSpanOfConversation(){
-            tmpDate = messagesList[messagesList.length-1].timestamp_ms - messagesList[0].timestamp_ms
-            return Math.ceil(tmpDate / (1000 * 60 * 60 * 24)) + " jours"
-        }
-
-        function getTotalMessagesPerParticipant(){
-            let ret = {}
-            for(p of participantList){
-                ret[p] = 0
-            }
-            for (m of messagesList){
-                ret[m.sender_name] ++
-            }
-            return ret
-        }
-
-        function getMessagesPerMonth() {
-            let ret = {}
-
-            for (i = startYear;i<=endYear;i++){
-                switch (i) {
-                    case startYear:
-                        for (j=startMonth;j<12;j++){
-                            ret[i+' '+j] = 0
-                        }
-                        break
-                    case endYear:
-                        for (j=0;j<=endMonth;j++){
-                            ret[i+' '+j] = 0
-                        }
-                        break
-                    default:
-                        for (j=0;j<12;j++){
-                            ret[i+' '+j] = 0
-                        }
-                        break
+        dataProcess = {
+            getParticipant : function(){
+                for (m of messagesList) {
+                    if(!participantList.includes(m.sender_name))
+                        participantList.push(m.sender_name)
                 }
-            }
-            for (m of messagesList) {
-                ret[new Date(m.timestamp_ms).getFullYear()+' '+new Date(m.timestamp_ms).getMonth()] ++
-            }
-            return ret
-        }
+                return participantList
+            },
 
-        function getMonthWithMostMsg(msgPerMonth) {
-            return Object.keys(msgPerMonth).reduce((a, b) => msgPerMonth[a] > msgPerMonth[b] ? a : b)
-        }
+            getTotalMsg : function(){
+                return messagesList.length
+            },
 
-        function getMessagesPerMonthPerParticipant() {
-            let startYear = new Date(messagesList[0].timestamp_ms).getFullYear(),
-                startMonth = new Date(messagesList[0].timestamp_ms).getMonth(),
-                endYear = new Date().getFullYear(),
-                endMonth = new Date().getMonth(),
-                ret = {}
+            getSpanOfConversation : function(){
+                tmpDate = messagesList[messagesList.length-1].timestamp_ms - messagesList[0].timestamp_ms
+                return Math.ceil(tmpDate / (1000 * 60 * 60 * 24)) + " jours"
+            },
 
-            function createLine(i,j) {
-                ret[i+' '+j] = {}
-                for (p of participantList) {
-                    ret[i+' '+j][p] = 0
+            getTotalMessagesPerParticipant : function(){
+                let ret = {}
+                for(p of participantList){
+                    ret[p] = 0
                 }
-            }
-
-            for (i = startYear;i<=endYear;i++){
-                switch (i) {
-                    case startYear:
-                        for (j=startMonth;j<12;j++){
-                            createLine(i,j)
-                        }
-                        break
-                    case endYear:
-                        for (j=0;j<=endMonth;j++){
-                            createLine(i,j)
-                        }
-                        break
-                    default:
-                        for (j=0;j<12;j++){
-                            createLine(i,j)
-                        }
-                        break
+                for (m of messagesList){
+                    ret[m.sender_name] ++
                 }
-            }
-            for (m of messagesList) {
-                ret[new Date(m.timestamp_ms).getFullYear()+' '+new Date(m.timestamp_ms).getMonth()][m.sender_name] ++
-            }
-            return ret
-        }
-        
-        function getMsgPerDay(word) {
+                return ret
+            },
 
+            getMessagesPerMonth : function(){
+                let ret = {}
+                for (let i = new Date(new Date(startDate).setDate(1)) ; i<=new Date(new Date(endDate).setDate(2)) ; i.addMonths(1)){
+                    ret[i.format('yyyy MM')] = 0
+                }
+                for (m of messagesList) {
+                    ret[new Date(m.timestamp_ms).format('yyyy MM')] ++
+                }
+                return ret
+            },
+
+            getMonthWithMostMsg : function() {
+                let msgPerMonth = this.getMessagesPerMonth()
+                return Object.keys(msgPerMonth).reduce((a, b) => msgPerMonth[a] > msgPerMonth[b] ? a : b)
+            },
+
+            getMessagesPerMonthPerParticipant : function(){
+                let ret = {}
+                for (let i = new Date(new Date(startDate).setDate(1)) ; i<=new Date(new Date(endDate).setDate(2)) ; i.addMonths(1)){
+                    ret[i.format('yyyy MM')] = {}
+                    for (p of participantList) {
+                        ret[i.format('yyyy MM')][p] = 0
+                    }
+                }
+                for (m of messagesList) {
+                    ret[new Date(m.timestamp_ms).format('yyyy MM')][m.sender_name] ++
+                }
+                return ret
+            },
+
+            getMsgPerDay : function(word){
+                let ret = {}
+                for (let i = new Date(startDate) ; i<=endDate ; i.addDays(1)){
+                    ret[i.format('yyyy MM dd')] = 0
+                }
+                for (m of messagesList) {
+                    ret[new Date(m.timestamp_ms).format('yyyy MM dd')] ++
+                }
+                return ret
+            },
+
+            getMsgPerDayPerParticipant : function(word){
+                let ret = {}
+                for (let i = new Date(new Date(startDate).setHours(1)) ; i<=new Date(new Date(endDate).setHours(2)) ; i.addDays(1)){
+                    ret[i.format('yyyy MM dd')] = {}
+                    for (p of participantList) {
+                        ret[i.format('yyyy MM dd')][p] = 0
+                    }
+                }
+                for (m of messagesList) {
+                    ret[new Date(m.timestamp_ms).format('yyyy MM dd')][m.sender_name] ++
+                }
+                return ret
+            },
         }
+
         
     </script>
 {% endblock %}
