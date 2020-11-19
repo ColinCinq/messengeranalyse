@@ -1,0 +1,72 @@
+@import url(https://fonts.googleapis.com/css?family=Montserrat:400,700);
+*,
+*:before,
+*:after {
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+button:focus {
+    outline: none;
+}
+
+.wrapper {
+    width: 100%;
+    min-height: 250px;
+    height: auto;
+}
+
+.drop {
+    width: 96%;
+    height: 96%;
+    border: 3px dashed #ff550b;
+    background-color: #121212;
+    border-radius: 15px;
+    text-align: center;
+    -webkit-transition: all 0.5s ease-out;
+    -moz-transition: all 0.5s ease-out;
+    transition: all 0.5s ease-out;
+    margin: auto;
+}
+.drop .cont {
+    -webkit-transition: all 0.5s ease-out;
+    -moz-transition: all 0.5s ease-out;
+    transition: all 0.5s ease-out;
+    margin: auto;
+}
+.drop .cont > i {
+    font-size: 200%;
+    position: relative;
+}
+.drop .cont .tit {
+    font-size: 200%;
+    text-transform: uppercase;
+}
+
+.drop input {
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+    background: red;
+    opacity: 0;
+    margin: auto;
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+}
+
+.fileDiv i {
+    line-height: 1.5;
+}
+.fileDiv .size {
+    font-size: 80%;
+}
+.hidden {
+    display: none;
+}
