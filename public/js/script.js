@@ -6,6 +6,8 @@ let messagesList = [],
 
 //util function
 Date.prototype.format = function (formatter) {
+    if (!formatter)
+        return
     date = this
     let z = {
         M: date.getMonth() + 1,
@@ -21,10 +23,6 @@ Date.prototype.format = function (formatter) {
         return date.getFullYear().toString().slice(-v.length)
     })
 }
-Date.prototype.addDays = function(days) {
-    this.setDate(this.getDate() + days)
-    return this
-}
 Date.isLeapYear = function (year) {
     return (((year % 4 === 0) && (year % 100 !== 0)) || (year % 400 === 0))
 }
@@ -34,11 +32,19 @@ Date.prototype.isLeapYear = function () {
 Date.prototype.getDaysInMonth = function () {
     return [31, (Date.isLeapYear(this.getFullYear()) ? 29 : 28), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][this.getMonth()]
 }
+Date.prototype.addDays = function(value) {
+    this.setDate(this.getDate() + value)
+    return this
+}
 Date.prototype.addMonths = function (value) {
     var n = this.getDate()
     this.setDate(1)
     this.setMonth(this.getMonth() + value)
     this.setDate(Math.min(n, this.getDaysInMonth()))
+    return this
+}
+Date.prototype.addYears = function(value) {
+    this.setFullYear(this.getFullYear() + value)
     return this
 }
 function sort_object(obj) {
@@ -144,8 +150,8 @@ $(folder).on('change', () => {
             dataProcess.getParticipant()
             generateGlobal()
 
-            $('#totMsg').text(dataProcess.getTotalMsg())
-            $('#convSpan').text(dataProcess.getSpanOfConversation())
+            /*$('#totMsg').text(dataProcess.getTotalMsg())
+            $('#convSpan').text(dataProcess.getSpanOfConversation())*/
 
             for (data in dataProcess) {
                 console.log(data + ' :')
@@ -166,137 +172,199 @@ dataProcess = {
         }
         return participantList
     },
-
-    getTotalMsg : function(){
-        return messagesList.length
-    },
-
     getSpanOfConversation : function(){
         tmpDate = messagesList[messagesList.length-1].timestamp_ms - messagesList[0].timestamp_ms
         return Math.ceil(tmpDate / (1000 * 60 * 60 * 24)) + " jours"
     },
-
-    getTotalMsgPerParticipant : function(){
-        let ret = {}
-        for(p of participantList){
-            ret[p] = 0
-        }
-        for (m of messagesList){
-            ret[m.sender_name] ++
-        }
-        return ret
-    },
-
-    getMsgPerMonth : function(){
-        let ret = {}
-        for (let i = new Date(new Date(startDate).setDate(1)) ; i<=new Date(new Date(endDate).setDate(2)) ; i.addMonths(1)){
-            ret[i.format('yyyy MM')] = 0
-        }
-        for (m of messagesList) {
-            ret[new Date(m.timestamp_ms).format('yyyy MM')] ++
-        }
-        return ret
-    },
-
     getMonthWithMostMsg : function() {
-        let msgPerMonth = this.getMessagesPerMonth()
+        let msgPerMonth = this.getTotalMsg('month')
         return Object.keys(msgPerMonth).reduce((a, b) => msgPerMonth[a] > msgPerMonth[b] ? a : b)
     },
 
-    getMsgPerMonthPerParticipant : function(){
-        let ret = {}
-        for (let i = new Date(new Date(startDate).setDate(1)) ; i<=new Date(new Date(endDate).setDate(2)) ; i.addMonths(1)){
-            ret[i.format('yyyy MM')] = {}
-            for (p of participantList) {
-                ret[i.format('yyyy MM')][p] = 0
-            }
+    // arg : nothing (all time) day/month/year (group by)
+    getTotalMsg : function(format){
+        let dateFormat, addMethod, ret = {}
+        switch (format) {
+            case 'day':
+                dateFormat = 'yyyy-MM-dd'
+                addMethod = 'addDays'
+                break
+            case 'month':
+                dateFormat = 'yyyy-MM'
+                addMethod = 'addMonths'
+                break
+            case 'year':
+                dateFormat = 'yyyy'
+                addMethod = 'addYears'
+                break
+            default:
+                return messagesList.length
+        }
+
+        for (let i = new Date(startDate) ; i.format(dateFormat)<=endDate.format(dateFormat) ; i[addMethod](1)){
+            ret[i.format(dateFormat)] = 0
         }
         for (m of messagesList) {
-            ret[new Date(m.timestamp_ms).format('yyyy MM')][m.sender_name] ++
+            ret[new Date(m.timestamp_ms).format(dateFormat)] ++
         }
         return ret
     },
-
-    getMsgPerDay : function(word){
-        let ret = {}
-        for (let i = new Date(startDate) ; i<=endDate ; i.addDays(1)){
-            ret[i.format('yyyy MM dd')] = 0
+    // arg : nothing (all time) day/month/year (group by)
+    getTotalMsgPerParticipant : function(format){
+        let dateFormat, addMethod, skip=false, ret = {}
+        switch (format) {
+            case 'day':
+                dateFormat = 'yyyy-MM-dd'
+                addMethod = 'addDays'
+                break
+            case 'month':
+                dateFormat = 'yyyy-MM'
+                addMethod = 'addMonths'
+                break
+            case 'year':
+                dateFormat = 'yyyy'
+                addMethod = 'addYears'
+                break
+            default:
+                skip=true
         }
+
+        if (!skip){
+            for (let i = new Date(startDate) ; i.format(dateFormat)<=endDate.format(dateFormat) ; i[addMethod](1)){
+                ret[i.format(dateFormat)] = {}
+                for(p of participantList){
+                    ret[i.format(dateFormat)][p] = 0
+                }
+            }
+        } else {
+            for(p of participantList){
+                ret[p] = 0
+            }
+        }
+
         for (m of messagesList) {
-            if (word)
-                a =1
-            else
-                ret[new Date(m.timestamp_ms).format('yyyy MM dd')] ++
+            if (!skip){
+                ret[new Date(m.timestamp_ms).format(dateFormat)][m.sender_name] ++
+            } else {
+                ret[m.sender_name] ++
+            }
         }
         return ret
     },
+    // arg : nothing (all time) day/month/year (group by)
+    getResponseTime : function(format){
+        let dateFormat, addMethod, skip=false, ret = {}
+        switch (format) {
+            case 'day':
+                dateFormat = 'yyyy-MM-dd'
+                addMethod = 'addDays'
+                break
+            case 'month':
+                dateFormat = 'yyyy-MM'
+                addMethod = 'addMonths'
+                break
+            case 'year':
+                dateFormat = 'yyyy'
+                addMethod = 'addYears'
+                break
+            default:
+                skip=true
+        }
 
-    getMsgPerDayPerParticipant : function(word){
-        let ret = {}
-        for (let i = new Date(new Date(startDate).setHours(1)) ; i<=new Date(new Date(endDate).setHours(2)) ; i.addDays(1)){
-            ret[i.format('yyyy MM dd')] = {}
-            for (p of participantList) {
-                ret[i.format('yyyy MM dd')][p] = 0
+        if (!skip){
+            for (let i = new Date(startDate) ; i.format(dateFormat)<=endDate.format(dateFormat) ; i[addMethod](1)){
+                ret[i.format(dateFormat)] = []
             }
+        } else {
+            ret = []
         }
-        for (m of messagesList) {
-            ret[new Date(m.timestamp_ms).format('yyyy MM dd')][m.sender_name] ++
-        }
-        return ret
-    },
 
-    getAverageResponseTimePerDay : function () {
-        let ret = {}
-        for (let i = new Date(new Date(startDate).setHours(1)) ; i<=new Date(new Date(endDate).setHours(2)) ; i.addDays(1)){
-            ret[i.format('yyyy MM dd')] = {
-                time : 0,
-                nb : 0
-            }
-        }
         for (k in messagesList) {
-            if (k!=0){
+            if (k!=='0'){
                 let prev = messagesList[k-1],
                     m = messagesList[k]
                 if (m.sender_name !== prev.sender_name){
-                    ret[new Date(m.timestamp_ms).format('yyyy MM dd')].time += m.timestamp_ms - prev.timestamp_ms
-                    ret[new Date(m.timestamp_ms).format('yyyy MM dd')].nb ++
+                    if (!skip)
+                        ret[new Date(m.timestamp_ms).format(dateFormat)].push(m.timestamp_ms - prev.timestamp_ms)
+                    else
+                        ret.push(m.timestamp_ms - prev.timestamp_ms)
                 }
             }
         }
-        for (date in ret) {
-            let tmp = ret[date].time / ret[date].nb
-            ret[date] = isNaN(tmp) ? null : Math.round(tmp)
+
+        if (!skip){
+            for (date in ret) {
+                let tmp = ret[date].reduce((a, b) => a + b, 0) /  ret[date].length
+                ret[date] = isNaN(tmp) ? null : Math.round(tmp)
+            }
+        } else {
+            let tmp = ret.reduce((a, b) => a + b, 0) / ret.length
+            ret = isNaN(tmp) ? null : Math.round(tmp)
         }
+
         return ret
     },
+    // arg : nothing (all time) day/month/year (group by)
+    getResponseTimePerParticipant : function(format){
+        let dateFormat, addMethod, skip=false, ret = {}
+        switch (format) {
+            case 'day':
+                dateFormat = 'yyyy-MM-dd'
+                addMethod = 'addDays'
+                break
+            case 'month':
+                dateFormat = 'yyyy-MM'
+                addMethod = 'addMonths'
+                break
+            case 'year':
+                dateFormat = 'yyyy'
+                addMethod = 'addYears'
+                break
+            default:
+                skip=true
+        }
 
-    getAverageResponseTimePerDayPerParticipant : function () {
-        let ret = {}
-        for (let i = new Date(new Date(startDate).setHours(1)) ; i<=new Date(new Date(endDate).setHours(2)) ; i.addDays(1)){
-            ret[i.format('yyyy MM dd')] = {}
-            for (p of participantList) {
-                ret[i.format('yyyy MM dd')][p] = {
-                    time : 0,
-                    nb : 0
+        if (!skip){
+            for (let i = new Date(startDate) ; i.format(dateFormat)<=endDate.format(dateFormat) ; i[addMethod](1)){
+                ret[i.format(dateFormat)] = {}
+                for (p of participantList) {
+                    ret[i.format(dateFormat)][p] = []
                 }
             }
+        } else {
+            ret = {}
+            for (p of participantList) {
+                ret[p] = []
+            }
         }
+
         for (k in messagesList) {
-            if (k!=0){
+            if (k!=='0'){
                 let prev = messagesList[k-1],
                     m = messagesList[k]
                 if (m.sender_name !== prev.sender_name){
-                    ret[new Date(m.timestamp_ms).format('yyyy MM dd')][m.sender_name].time += m.timestamp_ms - prev.timestamp_ms
-                    ret[new Date(m.timestamp_ms).format('yyyy MM dd')][m.sender_name].nb ++
+                    if (!skip)
+                        ret[new Date(m.timestamp_ms).format(dateFormat)][m.sender_name].push(m.timestamp_ms - prev.timestamp_ms)
+                    else
+                        ret[m.sender_name].push(m.timestamp_ms - prev.timestamp_ms)
                 }
             }
         }
-        for (date in ret) {
-            for(participant in ret[date]){
-                let tmp = ret[date][participant].time / ret[date][participant].nb
-                ret[date][participant] = isNaN(tmp) ? null : Math.round(tmp)
+
+        if (!skip){
+            for (date in ret) {
+                for(participant in ret[date]) {
+                    let tmp = ret[date][participant].reduce((a, b) => a + b, 0) / ret[date][participant].length
+                    ret[date][participant] = isNaN(tmp) ? null : Math.round(tmp)
+                }
+            }
+        } else {
+            for (participant in ret){
+                let tmp = ret[participant].reduce((a, b) => a + b, 0) / ret[participant].length
+                ret[participant] = isNaN(tmp) ? null : Math.round(tmp)
             }
         }
+
         return ret
     }
 }
