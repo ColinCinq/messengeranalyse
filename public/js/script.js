@@ -4,6 +4,83 @@ let messagesList = [],
     endDate,
     basedOnToday = 1
 
+//<editor-fold> desc="Utils"
+let chartColors = {
+    red:            'rgb(255, 99, 132)',
+    orange:         'rgb(255, 159, 64)',
+    yellow:         'rgb(255, 205, 86)',
+    green:          'rgb(75, 192, 192)',
+    blue:           'rgb(54, 162, 235)',
+    purple:         'rgb(153, 102, 255)',
+    grey:           'rgb(201, 203, 207)',
+    teal:           'rgb(0, 128, 128)',
+    marineBlue:     'rgb(0, 7, 45)',
+    skyBlue:        'rgb(87, 196, 229)',
+    hunterGreen:    'rgb(44, 85, 48)',
+    bordeaux:       'rgb(55, 6, 23)',
+    ochre:          'rgb(153, 98, 30)',
+    greenyellow:    'rgb(165, 180, 82)',
+    lightpink:      'rgb(212, 153, 185)',
+    lime:           'rgb(203, 243, 210)',
+    hotorange:      'rgb(255, 84, 0)',
+    rubyred:        'rgb(154, 3, 30)',
+}
+let chartColorsArray = [
+    chartColors.red,
+    chartColors.orange,
+    chartColors.yellow,
+    chartColors.green,
+    chartColors.blue,
+    chartColors.purple,
+    chartColors.grey,
+    chartColors.teal,
+    chartColors.marineBlue,
+    chartColors.skyBlue,
+    chartColors.hunterGreen,
+    chartColors.bordeaux,
+    chartColors.ochre,
+    chartColors.greenyellow,
+    chartColors.lightpink,
+    chartColors.lime,
+    chartColors.hotorange,
+    chartColors.rubyred,
+    chartColors.red,
+    chartColors.orange,
+    chartColors.yellow,
+    chartColors.green,
+    chartColors.blue,
+    chartColors.purple,
+    chartColors.grey,
+    chartColors.teal,
+    chartColors.marineBlue,
+    chartColors.skyBlue,
+    chartColors.hunterGreen,
+    chartColors.bordeaux,
+    chartColors.ochre,
+    chartColors.greenyellow,
+    chartColors.lightpink,
+    chartColors.lime,
+    chartColors.hotorange,
+    chartColors.rubyred,
+    chartColors.red,
+    chartColors.orange,
+    chartColors.yellow,
+    chartColors.green,
+    chartColors.blue,
+    chartColors.purple,
+    chartColors.grey,
+    chartColors.teal,
+    chartColors.marineBlue,
+    chartColors.skyBlue,
+    chartColors.hunterGreen,
+    chartColors.bordeaux,
+    chartColors.ochre,
+    chartColors.greenyellow,
+    chartColors.lightpink,
+    chartColors.lime,
+    chartColors.hotorange,
+    chartColors.rubyred,
+]
 //util function
 Date.prototype.format = function (formatter) {
     if (!formatter)
@@ -62,6 +139,16 @@ function sort_object(obj) {
     })
     return(sorted_obj)
 }
+function sort_object_by_value(obj) {
+    return Object.fromEntries(
+        Object.entries(obj).sort(([,a],[,b]) => b-a)
+    )
+}
+function object_to_array(obj) {
+    return Object.keys(obj).map(function(key) {
+        return [key, obj[key]];
+    });
+}
 function generateGlobal() {
     startDate = new Date(messagesList[0].timestamp_ms)
     if (basedOnToday === 1) {
@@ -70,7 +157,9 @@ function generateGlobal() {
         endDate = new Date()
     }
 }
+//</editor-fold>
 
+//<editor-fold> desc="Display"
 // Create the display for imported json file
 function createFileDiv(fileName, fileSize){
 
@@ -99,8 +188,48 @@ function deleteAllFileDiv(){
     $("#listFile").addClass('hidden')
 }
 
-// Import data from Json
+function display(dataProcess) {
+    $('#totalMsg').text(dataProcess.getTotalMsg())
+    let dataMsg = [], labelsMsg = []
+    let sorted = sort_object_by_value(dataProcess.getTotalMsgPerParticipant())
+    for (let participant in sorted) {
+        addParticipantToList(participant)
+        labelsMsg.push(participant)
+        dataMsg.push(sorted[participant])
+    }
+    msgParticipants = object_to_array(sorted)
 
+    let ctx = document.getElementById('msgPerParticipantChart').getContext('2d');
+    createDoughnutChart(ctx, labelsMsg, dataMsg)
+}
+function addParticipantToList(participant) {
+    $('#participants-list').append(
+        $('<li></li>').addClass('list-group-item d-flex justify-content-between align-items-center').text(participant).append(
+            $('<span></span>').addClass('badge badge-primary badge-pill').text(dataProcess.getTotalMsgPerParticipant()[participant])
+        )
+    )
+}
+function createDoughnutChart(ctx, labels, data) {
+    let chart = new Chart(ctx, {
+        // The type of chart we want to create
+        type: 'doughnut',
+
+        // The data for our dataset
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'My First dataset',
+                data: data,
+                backgroundColor: chartColorsArray
+            }]
+        },
+        options: {}
+    });
+}
+//</editor-fold>
+
+//<editor-fold> desc="Import Process"
+// Import data from Json
 // loading process from imported folder
 let folder = $('#msgFolder')[0]
 $(folder).on('change', () => {
@@ -152,16 +281,19 @@ $(folder).on('change', () => {
 
             /*$('#totMsg').text(dataProcess.getTotalMsg())
             $('#convSpan').text(dataProcess.getSpanOfConversation())*/
-
-            for (data in dataProcess) {
+            for (let data in dataProcess) {
                 console.log(data + ' :')
                 console.log(dataProcess[data]())
             }
+            display(dataProcess)
+
         })
     })
 })
 // end of import process
+//</editor-fold>
 
+//<editor-fold> desc="Data Process"
 // data process function
 dataProcess = {
     getParticipant : function(){
@@ -368,3 +500,4 @@ dataProcess = {
         return ret
     }
 }
+//</editor-fold>
