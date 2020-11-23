@@ -136,6 +136,9 @@ Date.prototype.format = function (formatter) {
     formatter = formatter.replace(/(M+|d+|h+|m+|s+)/g, function(v) {
         return ((v.length > 1 ? "0" : "") + z[v.slice(-1)]).slice(-2)
     })
+    formatter = formatter.replace(/(D+)/g, function (v) {
+        return date.toLocaleString('fr-FR', (v.length > 1 ? {weekday:'long'} : {weekday:'short'}))
+    })
     return formatter.replace(/(y+)/g, function(v) {
         return date.getFullYear().toString().slice(-v.length)
     })
@@ -473,8 +476,13 @@ dataProcess = {
 
     // arg : nothing (all time) day/month/year (group by)
     getTotalMsg : function(format){
-        let dateFormat, addMethod, ret = {}
+        let dateFormat, addMethod, skip = false, ret = {}
         switch (format) {
+            case 'hour':
+            case 'week':
+            case 'weekhour':
+                skip = true
+                break
             case 'day':
                 dateFormat = 'yyyy-MM-dd'
                 addMethod = 'addDays'
@@ -491,9 +499,14 @@ dataProcess = {
                 return messagesList.length
         }
 
-        for (let i = new Date(startDate) ; i.format(dateFormat)<=endDate.format(dateFormat) ; i[addMethod](1)){
-            ret[i.format(dateFormat)] = 0
+        if(!skip){
+            for (let i = new Date(startDate) ; i.format(dateFormat)<=endDate.format(dateFormat) ; i[addMethod](1)){
+                ret[i.format(dateFormat)] = 0
+            }
+        } else if (format = 'week') {
+            ret[i.format(dateFormat)]
         }
+
         for (m of messagesList) {
             ret[new Date(m.timestamp_ms).format(dateFormat)] ++
         }
@@ -695,5 +708,22 @@ dataProcess = {
         }
         return ret
     }
+
+   /* def getMessagesPerDayOfTheWeek():
+weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+weekDict = dict.fromkeys(weekdays,0)
+for m in messagesList:
+weekDict[weekdays[getDateFromTimestamp(m['timestamp_ms']).weekday()]] += 1
+return weekDict
+
+#@returns a dict  { time : value } where key is the hour (13:34 is 13) and value the messages of both participants at that time
+def getMessagesPerTimeOfDay():
+timeList = [i for i in range(24)]
+timeDict = dict.fromkeys(timeList,0)
+for m in messagesList:
+timeDict[getDateFromTimestamp(m['timestamp_ms']).hour] += 1
+return timeDict
+
+    */
 }
 //</editor-fold>
