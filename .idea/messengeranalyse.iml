@@ -13,5 +13,10 @@
     <orderEntry type="library" name="Chart.js" level="application" />
     <orderEntry type="library" name="chart.js" level="application" />
     <orderEntry type="library" name="chart.js" level="application" />
+    <orderEntry type="library" name="bootstrap" level="application" />
+    <orderEntry type="library" name="jquery" level="application" />
+    <orderEntry type="library" name="jquery-ui" level="application" />
+    <orderEntry type="library" name="jqueryui-touch-punch" level="application" />
+    <orderEntry type="library" name="popper.js" level="application" />
   </component>
 </module>

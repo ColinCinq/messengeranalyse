@@ -482,83 +482,150 @@ dataProcess = {
         return Object.keys(msgPerMonth).reduce((a, b) => msgPerMonth[a] > msgPerMonth[b] ? a : b)
     },
 
-    // arg : nothing (all time) day/month/year (group by)
-    getTotalMsg : function(format){
-        let dateFormat, addMethod, skip = false, ret = {}
+    /**
+     * fill the object that contain the data
+     * @param format => hour, day, week, month, year, weekhour
+     * @param participantList
+     */
+    getTotalMsg : function(format, participantList){
+        let data = [], ret = {}
+
+        /**
+         * create an array whit all formatted date as string
+         * @param dateFormat
+         * @param addMethod
+         */
+        function iterableDate(dateFormat, addMethod) {
+            let ret = []
+            for (let i = new Date(startDate) ; i.format(dateFormat)<=endDate.format(dateFormat) ; i[addMethod](1)){
+                ret.push(i.format(dateFormat))
+            }
+            return ret
+        }
+        /**
+         * create the object that contain the data
+         * @param parent
+         * @param data =>array(
+         *  {
+         *      iterable : array of key,
+         *      value : the value of the key (obj or number)
+         *  },
+         *  [...]
+         *)
+         */
+        function createRet(parent, data) {
+            for (key of data[0].iterable){
+                parent[key] = data[1] ? {} : 0
+                if (data[1])
+                    createRet(parent[key], data.slice(1))
+            }
+        }
+        /**
+         * fill the object that contain the data
+         * @param message
+         * @param parent
+         * @param data =>array(
+         *  {
+         *      iterable : array of key,
+         *      value : the value of the key (obj or number)
+         *  },
+         *  [...]
+         *)
+         */
+        function fillRet(message, parent, data) {
+            if (data[1]){
+                fillRet(message, parent[data[0].property(message)], data.slice(1))
+            }else{
+                if (!isNaN(parent[data[0].property(message)]))
+                    parent[data[0].property(message)] ++
+            }
+        }
+
         switch (format) {
             case 'hour':
+                data.push(
+                    {
+                        iterable : [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23],
+                        property : (m) => {
+                            return new Date(m.timestamp_ms).format('h')
+                        }
+                    }
+                )
+                break
             case 'week':
+                data.push(
+                    {
+                        iterable : ['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche'],
+                        property : (m) => {
+                            return new Date(m.timestamp_ms).format('DD')
+                        }
+                    }
+                )
+                break
             case 'weekhour':
-                skip = true
+                data.push(
+                    {
+                        iterable : ['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche'],
+                        property : (m) => {
+                            return new Date(m.timestamp_ms).format('DD')
+                        }
+                    },
+                    {
+                        iterable : [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23],
+                        property : (m) => {
+                            return new Date(m.timestamp_ms).format('h')
+                        }
+                    }
+                )
                 break
             case 'day':
-                dateFormat = 'yyyy-MM-dd'
-                addMethod = 'addDays'
+                data.push(
+                    {
+                        iterable : iterableDate('yyyy-MM-dd','addDays'),
+                        property : (m) => {
+                            return new Date(m.timestamp_ms).format('yyyy-MM-dd')
+                        }
+                    }
+                )
                 break
             case 'month':
-                dateFormat = 'yyyy-MM'
-                addMethod = 'addMonths'
+                data.push(
+                    {
+                        iterable : iterableDate('yyyy-MM','addMonths'),
+                        property : (m) => {
+                            return new Date(m.timestamp_ms).format('yyyy-MM')
+                        }
+                    }
+                )
                 break
             case 'year':
-                dateFormat = 'yyyy'
-                addMethod = 'addYears'
+                data.push(
+                    {
+                        iterable : iterableDate('yyyy','addYears'),
+                        property : (m) => {
+                            return new Date(m.timestamp_ms).format('yyyy')
+                        }
+                    }
+                )
                 break
             default:
                 return messagesList.length
         }
 
-        if(!skip){
-            for (let i = new Date(startDate) ; i.format(dateFormat)<=endDate.format(dateFormat) ; i[addMethod](1)){
-                ret[i.format(dateFormat)] = 0
-            }
-        } else if (format = 'week') {
-            ret[i.format(dateFormat)]
-        }
-
-        for (m of messagesList) {
-            ret[new Date(m.timestamp_ms).format(dateFormat)] ++
-        }
-        return ret
-    },
-    // arg : nothing (all time) day/month/year (group by)
-    getTotalMsgPerParticipant : function(format){
-        let dateFormat, addMethod, skip=false, ret = {}
-        switch (format) {
-            case 'day':
-                dateFormat = 'yyyy-MM-dd'
-                addMethod = 'addDays'
-                break
-            case 'month':
-                dateFormat = 'yyyy-MM'
-                addMethod = 'addMonths'
-                break
-            case 'year':
-                dateFormat = 'yyyy'
-                addMethod = 'addYears'
-                break
-            default:
-                skip=true
-        }
-
-        if (!skip){
-            for (let i = new Date(startDate) ; i.format(dateFormat)<=endDate.format(dateFormat) ; i[addMethod](1)){
-                ret[i.format(dateFormat)] = {}
-                for(p of participantList){
-                    ret[i.format(dateFormat)][p] = 0
+        if (participantList){
+            data.push(
+                {
+                    iterable : participantList,
+                    property : (m) => {
+                        return m.sender_name
+                    }
                 }
-            }
-        } else {
-            for(p of participantList){
-                ret[p] = 0
-            }
+            )
         }
 
+        createRet(ret, data)
         for (m of messagesList) {
-            if (!skip){
-                ret[new Date(m.timestamp_ms).format(dateFormat)][m.sender_name] ++
-            } else {
-                ret[m.sender_name] ++
-            }
+            fillRet(m, ret, data)
         }
         return ret
     },
@@ -677,61 +744,6 @@ dataProcess = {
         }
 
         return ret
-    },
-    getTotalMsgPerWeekDay : function() {
-        let ret = {
-            'Lundi': 0,
-            'Mardi': 0,
-            'Mercredi': 0,
-            'Jeudi': 0,
-            'Vendredi': 0,
-            'Samedi': 0,
-            'Dimanche': 0,
-        }
-        for (let m of messagesList) {
-            let weekday = new Date(m.timestamp_ms).getDay()
-            switch (weekday) {
-                case 0:
-                    ret['Dimanche'] ++
-                    break
-                case 1:
-                    ret['Lundi'] ++
-                    break
-                case 2:
-                    ret['Mardi'] ++
-                    break
-                case 3:
-                    ret['Mercredi'] ++
-                    break
-                case 4:
-                    ret['Jeudi'] ++
-                    break
-                case 5:
-                    ret['Vendredi'] ++
-                    break
-                case 6:
-                    ret['Samedi'] ++
-                    break
-            }
-        }
-        return ret
     }
-
-   /* def getMessagesPerDayOfTheWeek():
-weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-weekDict = dict.fromkeys(weekdays,0)
-for m in messagesList:
-weekDict[weekdays[getDateFromTimestamp(m['timestamp_ms']).weekday()]] += 1
-return weekDict
-
-#@returns a dict  { time : value } where key is the hour (13:34 is 13) and value the messages of both participants at that time
-def getMessagesPerTimeOfDay():
-timeList = [i for i in range(24)]
-timeDict = dict.fromkeys(timeList,0)
-for m in messagesList:
-timeDict[getDateFromTimestamp(m['timestamp_ms']).hour] += 1
-return timeDict
-
-    */
 }
 //</editor-fold>
