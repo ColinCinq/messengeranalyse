@@ -243,7 +243,11 @@ function display(dataProcess) {
 
     // Nombre de messages par mois - Bar Chart
     let msgPerMonthChart = document.getElementById('msgPerMonthChart').getContext('2d');
-    createBarChart(msgPerMonthChart,Object.keys(dataProcess.getTotalMsg('month')), {"Nombre de mesages par mois":Object.values(dataProcess.getTotalMsg('month'))})
+    createBarChart(
+        msgPerMonthChart,
+        Object.keys(dataProcess.getTotalMsg('month')),
+        {"Nombre de messages par mois" : Object.values(dataProcess.getTotalMsg('month'))}
+        )
 
     // Nombre de messages par participant par mois - Bar Chart
     let msgPerParticipantPerMonth = dataProcess.getTotalMsgPerParticipant('month')
@@ -258,9 +262,23 @@ function display(dataProcess) {
         }
     }
     let msgPerParticipantPerMonthChart = document.getElementById('msgPerParticipantPerMonthChart').getContext('2d');
-    createBarChart(msgPerParticipantPerMonthChart,labels, data)
+    createBarChart(
+        msgPerParticipantPerMonthChart,
+        labels,
+        data
+    )
+
+    // Rapidité de réponse
+    let responseTimePerParticipantChart = document.getElementById('responseTimePerParticipantChart').getContext('2d');
+    createBarChart(
+        responseTimePerParticipantChart,
+        Object.keys(dataProcess.getResponseTimePerParticipant()),
+        {"Temps de réponse par participant" : Object.values(dataProcess.getResponseTimePerParticipant())}
+        )
+
 
 }
+
 function addParticipantToList(participant) {
     $('#participants-list').append(
         $('<li></li>').addClass('list-group-item d-flex justify-content-between align-items-center').text(participant).append(
@@ -342,7 +360,6 @@ function createRadarChart(ctx, labels, data) {
  */
 function createBarChart(ctx, labels, data) {
     let datasets = []
-    console.log(data)
     let i=0
     for (dataset in data) {
         datasets.push({
@@ -352,7 +369,6 @@ function createBarChart(ctx, labels, data) {
         })
         i++
     }
-    console.log (datasets)
 
     new Chart(ctx, {
         // The type of chart we want to create
