@@ -382,7 +382,13 @@ function createBarChart(ctx, labels, data) {
             labels: labels,
             datasets: datasets
         },
-        options: {}
+        options: {
+            scales: {
+                ticks: {
+                    min: 0
+                }
+            }
+        }
     });
 }
 
