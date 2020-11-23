@@ -25,6 +25,26 @@ let chartColors = {
     hotorange:      'rgb(255, 84, 0)',
     rubyred:        'rgb(154, 3, 30)',
 }
+let chartBackgroundColors = {
+    red:            'rgba(255, 99, 132, 0.2)',
+    orange:         'rgba(255, 159, 64, 0.2)',
+    yellow:         'rgba(255, 205, 86, 0.2)',
+    green:          'rgba(75, 192, 192, 0.2)',
+    blue:           'rgba(54, 162, 235, 0.2)',
+    purple:         'rgba(153, 102, 255, 0.2)',
+    grey:           'rgba(201, 203, 207, 0.2)',
+    teal:           'rgba(0, 128, 128, 0.2)',
+    marineBlue:     'rgba(0, 7, 45, 0.2)',
+    skyBlue:        'rgba(87, 196, 229, 0.2)',
+    hunterGreen:    'rgba(44, 85, 48, 0.2)',
+    bordeaux:       'rgba(55, 6, 23, 0.2)',
+    ochre:          'rgba(153, 98, 30, 0.2)',
+    greenyellow:    'rgba(165, 180, 82, 0.2)',
+    lightpink:      'rgba(212, 153, 185, 0.2)',
+    lime:           'rgba(203, 243, 210, 0.2)',
+    hotorange:      'rgba(255, 84, 0, 0.2)',
+    rubyred:        'rgba(154, 3, 30, 0.2)',
+}
 let chartColorsArray = [
     chartColors.red,
     chartColors.orange,
@@ -80,6 +100,26 @@ let chartColorsArray = [
     chartColors.lime,
     chartColors.hotorange,
     chartColors.rubyred,
+]
+let chartBackgroundColorsArray = [
+    chartBackgroundColors.red,
+    chartBackgroundColors.orange,
+    chartBackgroundColors.yellow,
+    chartBackgroundColors.green,
+    chartBackgroundColors.blue,
+    chartBackgroundColors.purple,
+    chartBackgroundColors.grey,
+    chartBackgroundColors.teal,
+    chartBackgroundColors.marineBlue,
+    chartBackgroundColors.skyBlue,
+    chartBackgroundColors.hunterGreen,
+    chartBackgroundColors.bordeaux,
+    chartBackgroundColors.ochre,
+    chartBackgroundColors.greenyellow,
+    chartBackgroundColors.lightpink,
+    chartBackgroundColors.lime,
+    chartBackgroundColors.hotorange,
+    chartBackgroundColors.rubyred,
 ]
 //util function
 Date.prototype.format = function (formatter) {
@@ -144,11 +184,6 @@ function sort_object_by_value(obj) {
         Object.entries(obj).sort(([,a],[,b]) => b-a)
     )
 }
-function object_to_array(obj) {
-    return Object.keys(obj).map(function(key) {
-        return [key, obj[key]];
-    });
-}
 function generateGlobal() {
     startDate = new Date(messagesList[0].timestamp_ms)
     if (basedOnToday === 1) {
@@ -190,17 +225,41 @@ function deleteAllFileDiv(){
 
 function display(dataProcess) {
     $('#totalMsg').text(dataProcess.getTotalMsg())
-    let dataMsg = [], labelsMsg = []
-    let sorted = sort_object_by_value(dataProcess.getTotalMsgPerParticipant())
-    for (let participant in sorted) {
-        addParticipantToList(participant)
-        labelsMsg.push(participant)
-        dataMsg.push(sorted[participant])
-    }
-    msgParticipants = object_to_array(sorted)
 
-    let ctx = document.getElementById('msgPerParticipantChart').getContext('2d');
-    createDoughnutChart(ctx, labelsMsg, dataMsg)
+    // Nombre de messages par participants - Doughnut Chart
+    let dataMsgPerParticipant = [], labelsMsgPerParticipant = []
+    let sortedMsgPerParticipant = sort_object_by_value(dataProcess.getTotalMsgPerParticipant())
+    for (let participant in sortedMsgPerParticipant) {
+        addParticipantToList(participant)
+        labelsMsgPerParticipant.push(participant)
+        dataMsgPerParticipant.push(sortedMsgPerParticipant[participant])
+    }
+    let msgPerParticipant = document.getElementById('msgPerParticipantChart').getContext('2d');
+    createDoughnutChart(msgPerParticipant, labelsMsgPerParticipant, dataMsgPerParticipant)
+
+    // Nombre de messages par jour de la semaine - Radar Chart
+    let msgPerWeekDayChart = document.getElementById('msgPerWeekDayChart').getContext('2d');
+    createRadarChart(msgPerWeekDayChart,Object.keys(dataProcess.getTotalMsgPerWeekDay()), Object.values(dataProcess.getTotalMsgPerWeekDay()))
+
+    // Nombre de messages par mois - Bar Chart
+    let msgPerMonthChart = document.getElementById('msgPerMonthChart').getContext('2d');
+    createBarChart(msgPerMonthChart,Object.keys(dataProcess.getTotalMsg('month')), {"Nombre de mesages par mois":Object.values(dataProcess.getTotalMsg('month'))})
+
+    // Nombre de messages par participant par mois - Bar Chart
+    let msgPerParticipantPerMonth = dataProcess.getTotalMsgPerParticipant('month')
+    let labels = [], data = {}
+    for (participant of participantList) {
+        data[participant] = []
+    }
+    for (msg in msgPerParticipantPerMonth) {
+        labels.push(msg)
+        for (participant in msgPerParticipantPerMonth[msg]) {
+            data[participant].push(msgPerParticipantPerMonth[msg][participant])
+        }
+    }
+    let msgPerParticipantPerMonthChart = document.getElementById('msgPerParticipantPerMonthChart').getContext('2d');
+    createBarChart(msgPerParticipantPerMonthChart,labels, data)
+
 }
 function addParticipantToList(participant) {
     $('#participants-list').append(
@@ -209,8 +268,15 @@ function addParticipantToList(participant) {
         )
     )
 }
+
+/**
+ * Creates a doughnut chart (using chart.js)
+ * @param ctx
+ * @param labels
+ * @param data
+ */
 function createDoughnutChart(ctx, labels, data) {
-    let chart = new Chart(ctx, {
+    new Chart(ctx, {
         // The type of chart we want to create
         type: 'doughnut',
 
@@ -226,9 +292,85 @@ function createDoughnutChart(ctx, labels, data) {
         options: {}
     });
 }
+
+/**
+ * Create a radar chart
+ * @param ctx
+ * @param labels
+ * @param data
+ */
+function createRadarChart(ctx, labels, data) {
+    new Chart(ctx, {
+        // The type of chart we want to create
+        type: 'radar',
+        gridLines: {
+            color: 'rgba(225, 225, 225, 1)',
+        },
+
+        // The data for our dataset
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'My First dataset',
+                data: data,
+                backgroundColor: chartBackgroundColorsArray[0],
+                borderColor: chartColorsArray[0],
+                pointBackgroundColor: chartColorsArray[0],
+            }]
+        },
+        options: {
+            scale: {
+                angleLines: {
+                    color: 'rgba(225, 225, 225, 1)',
+                },
+                gridLines: {
+                    color: 'rgba(225, 225, 225, 1)',
+                },
+                ticks: {
+                    min:0
+                }
+            }
+        }
+    });
+}
+
+/**
+ * Create a bar chart
+ * @param ctx
+ * @param labels
+ * @param data
+ */
+function createBarChart(ctx, labels, data) {
+    let datasets = []
+    console.log(data)
+    let i=0
+    for (dataset in data) {
+        datasets.push({
+            label: dataset,
+            data: data[dataset],
+            backgroundColor: chartColorsArray[i]
+        })
+        i++
+    }
+    console.log (datasets)
+
+    new Chart(ctx, {
+        // The type of chart we want to create
+        type: 'bar',
+
+        // The data for our dataset
+        data: {
+            labels: labels,
+            datasets: datasets
+        },
+        options: {}
+    });
+}
+
 //</editor-fold>
 
 //<editor-fold> desc="Import Process"
+
 // Import data from Json
 // loading process from imported folder
 let folder = $('#msgFolder')[0]
@@ -497,6 +639,44 @@ dataProcess = {
             }
         }
 
+        return ret
+    },
+    getTotalMsgPerWeekDay : function() {
+        let ret = {
+            'Lundi': 0,
+            'Mardi': 0,
+            'Mercredi': 0,
+            'Jeudi': 0,
+            'Vendredi': 0,
+            'Samedi': 0,
+            'Dimanche': 0,
+        }
+        for (let m of messagesList) {
+            let weekday = new Date(m.timestamp_ms).getDay()
+            switch (weekday) {
+                case 0:
+                    ret['Dimanche'] ++
+                    break
+                case 1:
+                    ret['Lundi'] ++
+                    break
+                case 2:
+                    ret['Mardi'] ++
+                    break
+                case 3:
+                    ret['Mercredi'] ++
+                    break
+                case 4:
+                    ret['Jeudi'] ++
+                    break
+                case 5:
+                    ret['Vendredi'] ++
+                    break
+                case 6:
+                    ret['Samedi'] ++
+                    break
+            }
+        }
         return ret
     }
 }
