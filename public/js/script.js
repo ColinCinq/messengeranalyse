@@ -384,9 +384,11 @@ function createBarChart(ctx, labels, data) {
         },
         options: {
             scales: {
-                ticks: {
-                    min: 0
-                }
+                yAxes: [{
+                    ticks: {
+                        min: 0
+                    }
+                }]
             }
         }
     });
